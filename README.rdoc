@@ -1,0 +1,39 @@
+= bio-pileup_iterator
+
+Full description goes here
+
+Note: this software is under active development!
+
+== Installation
+
+        gem install bio-pileup_iterator
+
+== Usage
+
+== Developers
+
+To use the library 
+
+        require 'bio-pileup_iterator
+
+The API doc is online. For more code examples see also the test files in
+the source tree.
+        
+== Project home page
+
+Information on the source tree, documentation, issues and how to contribute, see
+
+  http://github.com/wwood/bioruby-pileup_iterator
+
+== Cite
+
+  If you use this software, please cite http://dx.doi.org/10.1093/bioinformatics/btq475
+
+== Biogems.info
+
+This Biogem is published at http://biogems.info/index.html#bio-pileup_iterator
+
+== Copyright
+
+Copyright (c) 2012 Ben J. Woodcroft. See LICENSE.txt for further details.
+
