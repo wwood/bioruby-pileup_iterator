@@ -2,6 +2,9 @@ source "http://rubygems.org"
 # Add dependencies required to use your gem here.
 # Example:
 #   gem "activesupport", ">= 2.3.5"
+gem 'bio', '>=1.4.2'
+gem 'bio-samtools', '>=0.5.2'
+gem 'bio-logger', '>=1.0.0'
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
