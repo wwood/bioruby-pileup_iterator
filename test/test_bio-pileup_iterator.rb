@@ -21,8 +21,8 @@ class TestBioPileupIterator < Test::Unit::TestCase
     reads = piles[0].reads
     reads2 = piles[1].reads
 
-    assert_equal 'A', piles[0].consensus
-    assert_equal 'T', piles[1].consensus
+    assert_equal 'A', piles[0].ref_base
+    assert_equal 'T', piles[1].ref_base
     assert_equal 4, reads.length
     assert_equal 2, reads2.length
     assert_equal 'AT', reads2[0].sequence
