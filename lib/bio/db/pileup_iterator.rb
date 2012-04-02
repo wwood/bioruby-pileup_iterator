@@ -13,8 +13,12 @@ class Bio::DB::Pileup
 #contig00091 10  A 33  ,,.,,......,,,.....,,.,,,,,,,.,.^]. aaPaa^aaaYaaaaaaaaaaaaaaaaaaaaaaB
 attr_accessor :ref_name, :pos, :ref_base, :quality, :read_bases, :qualities
   def initialize(line)
-    (@ref_name, @pos, @ref_base, @quality, @read_bases, @qualities) = line.split("\t")
+    (@ref_name, @pos, @ref_base, @quality, @read_bases, @qualities) = line.split(/\s+/)
     @pos = @pos.to_i
+  end
+  
+  def coverage
+    quality.length
   end
 end
 
