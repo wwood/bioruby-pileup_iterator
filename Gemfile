@@ -3,7 +3,7 @@ source "http://rubygems.org"
 # Example:
 #   gem "activesupport", ">= 2.3.5"
 gem 'bio', '>=1.4.2'
-gem 'bio-samtools', '>=0.5.2'
+gem 'bio-samtools', '>=0.5.3'
 gem 'bio-logger', '>=1.0.0'
 
 # Add dependencies to develop your gem here.
