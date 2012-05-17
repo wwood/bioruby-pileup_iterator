@@ -170,4 +170,43 @@ class TestBioPileupIterator < Test::Unit::TestCase
     piles = piles.to_a
     assert_equal({503 => 'gg'}, piles[0].reads[0].insertions)
   end
+  
+  def test_non_perfect_starting_read
+    line = "contig00075\t503\tG\t24\t^F.*+1gg\tE\n"
+    
+    piles = Bio::DB::PileupIterator.new(line)
+    # piles.log.level = Bio::Log::DEBUG
+    piles = piles.to_a
+    assert_equal '+', piles[0].reads[0].direction
+    assert_equal 'G', piles[0].reads[0].sequence
+    assert_equal '*', piles[0].reads[1].sequence
+  end
+  
+  def test_non_matching_finish
+    line = "contig00002\t6317\tC\t2\ta$.\t!B\n"+
+     "contig00002\t6318\tT\t1\t.\tA\n"
+
+    
+    piles = Bio::DB::PileupIterator.new(line)
+    # piles.log.level = Bio::Log::DEBUG
+    piles = piles.to_a
+    assert_equal 2, piles[0].reads.length
+    assert_equal 'a', piles[0].reads[0].sequence
+    assert_equal 'CT', piles[0].reads[1].sequence
+  end
+  
+  def test_insertion_then_mismatch
+    line = "contig00044\t867\tC\t6\t,,,,,.\t!:!!:=\n"+
+     "contig00044\t868\tG\t6\tt,+1ttt,.\t!A!!C9\n"
+
+    piles = Bio::DB::PileupIterator.new(line)
+    
+    piles = piles.to_a
+    assert_equal 6, piles[0].reads.length
+    assert_equal 'Ct', piles[0].reads[0].sequence
+    assert_equal 'CG', piles[0].reads[1].sequence
+    hash = {868=>'t'}
+    assert_equal hash, piles[0].reads[1].insertions
+    assert_equal 'Ct', piles[0].reads[2].sequence
+  end
 end

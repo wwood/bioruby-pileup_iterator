@@ -9,20 +9,6 @@ class Bio::DB::Pileup
   end
 end
 
-class Bio::DB::Pileup
-#contig00091 10  A 33  ,,.,,......,,,.....,,.,,,,,,,.,.^]. aaPaa^aaaYaaaaaaaaaaaaaaaaaaaaaaB
-attr_accessor :ref_name, :pos, :ref_base, :quality, :read_bases, :qualities
-  def initialize(line)
-    (@ref_name, @pos, @ref_base, @quality, @read_bases, @qualities) = line.split(/\s+/)
-    @pos = @pos.to_i
-  end
-  
-  def coverage
-    quality.length
-  end
-end
-
-
 class Bio::DB::PileupIterator
   include Enumerable
   
@@ -67,6 +53,12 @@ class Bio::DB::PileupIterator
         # Now, parse what the current read is
         if matches = bases.match(/^([ACGTNacgtn\.\,])([\+\-])([0-9]+)([ACGTNacgtn]+)(\${0,1})/)
           #log.debug "matched #{matches.to_s} as insertion/deletion"
+          
+          # match again to better match the number of inserted bases
+          num_inserted = matches[3].to_i
+          matches = bases.match(/^([ACGTNacgtn\.\,])([\+\-])([0-9]+)([ACGTNacgtn]{#{num_inserted}})(\${0,1})/)
+          raise unless matches
+          
           # insertion / deletion
           if matches[1] == '.'
             raise if !current_read.direction.nil? and current_read.direction != PileupRead::FORWARD_DIRECTION
@@ -130,7 +122,7 @@ class Bio::DB::PileupIterator
           current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
         
         # starting a new read (possibly with a gap), with an accompanying insertion/deletion
-        elsif matches = bases.match(/^\^\]([ACGTNacgtn\.\,\*])([\+\-])([0-9]+)([ACGTNacgtn]+)(\${0,1})/)
+        elsif matches = bases.match(/^\^.([ACGTNacgtn\.\,\*])([\+\-])([0-9]+)([ACGTNacgtn]+)(\${0,1})/)
           if matches[1] == '.'
             #log.debug 'forward match starting a read'
             current_read.direction = PileupRead::FORWARD_DIRECTION
@@ -166,7 +158,7 @@ class Bio::DB::PileupIterator
 
           
         # regular match, starting a new read
-        elsif matches = bases.match(/^\^\]([ACGTNacgtn\.\,\*])(\${0,1})/)
+        elsif matches = bases.match(/^\^.([ACGTNacgtn\.\,\*])(\${0,1})/)
           if matches[1] == '.'
             #log.debug 'forward match starting a read'
             current_read.direction = PileupRead::FORWARD_DIRECTION
@@ -209,21 +201,14 @@ class Bio::DB::PileupIterator
             current_read.add_insertion pileup.pos, matches[2], matches[3]
           end
 
-          
-        elsif matches = bases.match(/^\*(\${0,1})/)
-          #log.debug 'gap found'
-          # gap - should already be known from the last position
-          current_read.sequence = "#{current_read.sequence}*"
-          if matches[1].length > 0
-            #log.debug "Ending this read"
-            # end this read
-            reads_ending.push current_read_index
-          end
-          
-        elsif matches = bases.match(/(^[ACGTNacgtn])/)
-          #log.debug 'regular mismatch found'
+        elsif matches = bases.match(/(^[ACGTNacgtn\*])(\${0,1})/)
+          #log.debug 'mismatch found (or deletion)'
           # simple mismatch
           current_read.sequence = "#{current_read.sequence}#{matches[1]}"
+          if matches[2].length > 0
+            #log.debug "Ending this read"
+            reads_ending.push current_read_index
+          end
         end
         #log.debug "current read's sequence: #{current_read.sequence}"
         
