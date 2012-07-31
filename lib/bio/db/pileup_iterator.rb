@@ -21,45 +21,42 @@ class Bio::DB::PileupIterator
   # Known problems:
   # * Doesn't record start or ends of each read
   # * Doesn't lookahead to determine the sequence of each read (though it does give the preceding bases)
-  # * Gives no information with mismatches
   def each
     current_ordered_reads = []
     log = Bio::Log::LoggerPlus['bio-pileup_iterator']
+    logging = true
     
     @io.each_line do |line|
-      #log.debug "new current_line: #{line.inspect}"
       pileup = Bio::DB::Pileup.new(line.strip)
       current_read_index = 0
       reads_ending = []
 
       bases = pileup.read_bases
-      #log.debug "new column's read_bases: #{bases.inspect}"
-      #log.debug "pileup entry parsed: #{pileup.inspect}"
+      log.debug "new column's read_bases: #{bases.inspect}" if log.debug?
+      log.debug "pileup entry parsed: #{pileup.inspect}" if log.debug?
       while bases.length > 0
-        #log.debug "bases remaining: #{bases}    ------------------------"
         
         # Firstly, what is the current read we are working with
         current_read = current_ordered_reads[current_read_index]
         # if adding a new read
         if current_read.nil?
-          #log.debug 'adding a new read'
+          log.debug 'adding a new read: '+bases if log.debug?
           current_read = PileupRead.new
           current_ordered_reads.push current_read
-        else
-          #log.debug 'reusing a read'
         end
         matches = nil
-
-        # Now, parse what the current read is
-        if matches = bases.match(/^([ACGTNacgtn\.\,])([\+\-])([0-9]+)([ACGTNacgtn]+)(\${0,1})/)
-          #log.debug "matched #{matches.to_s} as insertion/deletion"
-          
-          # match again to better match the number of inserted bases
-          num_inserted = matches[3].to_i
-          matches = bases.match(/^([ACGTNacgtn\.\,])([\+\-])([0-9]+)([ACGTNacgtn]{#{num_inserted}})(\${0,1})/)
-          raise unless matches
-          
-          # insertion / deletion
+        
+        # if starting, remove it
+        matched_string = ''
+        if bases[0..1]=='^]'
+          matched_string += bases[0]
+          bases = bases[2...bases.length]
+        end
+        log.debug "after read start removal, pileup is #{bases}" if log.debug?
+        
+        # next expect the actual base bit
+        if matches = bases.match(/^([ACGTNacgtn\.\,\*])/)
+          matched_string += bases[0]
           if matches[1] == '.'
             raise if !current_read.direction.nil? and current_read.direction != PileupRead::FORWARD_DIRECTION
             current_read.direction = PileupRead::FORWARD_DIRECTION
@@ -72,152 +69,47 @@ class Bio::DB::PileupIterator
             # Could sanity check the direction here by detecting case, but eh
             current_read.sequence = "#{current_read.sequence}#{matches[1]}"
           end
-          
-          # record the insertion
-          if matches[2] == '+'
-            current_read.add_insertion pileup.pos, matches[3], matches[4]
-          end
-          
-          if matches[5].length > 0
-            #log.debug "Ending this read"
-            # end this read
-            reads_ending.push current_read_index
-          end
-        # currently I don't care about indels, except for the direction, so I'll leave it at that for now
-
-        # end of the read
-        elsif matches = bases.match(/^([\.\,])\$/)
-          #log.debug "matched #{matches.to_s} as end of read"
-          # regular match in some direction, end of read
-          if matches[1]=='.' # if forwards
-            raise if current_read.direction and current_read.direction != PileupRead::FORWARD_DIRECTION
-            current_read.direction = PileupRead::FORWARD_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          else # else must be backwards, since it can only be , or .
-            raise if current_read.direction and current_read.direction != PileupRead::REVERSE_DIRECTION
-            current_read.direction = PileupRead::REVERSE_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          end
-          #log.debug "current read after deletion: #{current_read.inspect}"
-          reads_ending.push current_read_index
-          
-        # regular match continuuing onwards
-        elsif matches = bases.match(/^\./)
-          #log.debug "matched #{matches.to_s} as forward regular match"
-          # regular match in the forward direction
-          raise if !current_read.direction.nil? and current_read.direction != PileupRead::FORWARD_DIRECTION
-          current_read.direction = PileupRead::FORWARD_DIRECTION
-          #log.debug "before adding this base, current sequence is '#{current_read.sequence}'"
-          current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          #log.debug "after adding this base, current sequence is '#{current_read.sequence}', ref_base: #{pileup.ref_base}"
-        elsif matches = bases.match(/^\,/)
-          #log.debug "matched #{matches.to_s} as reverse regular match"
-          # regular match in the reverse direction
-          if !current_read.direction.nil? and current_read.direction != PileupRead::REVERSE_DIRECTION
-            error_msg = "Unexpectedly found read a #{current_read.direction} direction read when expecting a positive direction one. This suggests there is a problem with either the pileup file or this pileup parser. Current pileup column #{pileup.inspect}, read #{current_read.inspect}, chomped until #{bases}"
-            log.error error_msg
-            raise Exception, error_msg
-          end
-          current_read.direction = PileupRead::REVERSE_DIRECTION
-          current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
+          # remove the matched base
+          bases = bases[1...bases.length]
+        else
+          raise Exception, "Expected a character corresponding to a base, one of '[ACGTNacgtn.,]'. Starting here: #{bases}, from #{pileup.inspect}"
+        end
+        log.debug "after regular position removal, pileup is #{bases}" if log.debug?
         
-        # starting a new read (possibly with a gap), with an accompanying insertion/deletion
-        elsif matches = bases.match(/^\^.([ACGTNacgtn\.\,\*])([\+\-])([0-9]+)([ACGTNacgtn]+)(\${0,1})/)
-          if matches[1] == '.'
-            #log.debug 'forward match starting a read'
-            current_read.direction = PileupRead::FORWARD_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          elsif matches[1] == ','
-            #log.debug 'reverse match starting a read'
-            current_read.direction = PileupRead::REVERSE_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          elsif matches[1] == '*'
-            #log.debug 'starting a read with a gap'
-            # leave direction unknown at this point
-            current_read.sequence = "#{current_read.sequence}#{matches[1]}"
-          elsif matches[1] == matches[1].upcase
-            #log.debug 'forward match starting a read, warning of insertion next'
-            current_read.direction = PileupRead::FORWARD_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{matches[1]}"
+        # then read insertion or deletion in the coming position(s)
+        if matches = bases.match(/^([\+\-])([0-9]+)/)
+          matched_length = matches[1].length+matches[2].length
+          bases = bases[matched_length...bases.length]
+          matched_string += matches[1]+matches[2]
+          log.debug "after removal of bases leading up to an insertion/deletion, pileup is #{bases}" if log.debug?
+          
+          regex = /^([ACGTNacgtn]{#{matches[2].to_i}})/
+          log.debug "insertion/deletion secondary regex: #{regex.inspect}" if log.debug?
+          last_matched = bases.match(regex)
+          
+          if last_matched.nil?
+            raise Exception, "Failed to parse insertion. Starting here: #{bases}, from #{pileup.inspect}"
           else
-            #log.debug 'forward match starting a read, warning of insertion next'
-            current_read.direction = PileupRead::REVERSE_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{matches[1]}"
-          end
-          
-          # record the insertion
-          if matches[2] == '+'
-            current_read.add_insertion pileup.pos, matches[3], matches[4]
-          end
-          
-          if matches[5].length > 0
-            #log.debug "Ending this read"
-            # end this read
-            reads_ending.push current_read_index
-          end
-
-          
-        # regular match, starting a new read
-        elsif matches = bases.match(/^\^.([ACGTNacgtn\.\,\*])(\${0,1})/)
-          if matches[1] == '.'
-            #log.debug 'forward match starting a read'
-            current_read.direction = PileupRead::FORWARD_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          elsif matches[1] == ','
-            #log.debug 'reverse match starting a read'
-            current_read.direction = PileupRead::REVERSE_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
-          elsif matches[1] == '*'
-            #log.debug 'gap starting a read'
-            current_read.sequence = "#{current_read.sequence}#{matches[1]}"
-          elsif matches[1] == matches[1].upcase
-            #log.debug 'forward match starting a read, warning of insertion next'
-            current_read.direction = PileupRead::FORWARD_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{matches[1]}"
-          else
-            #log.debug 'forward match starting a read, warning of insertion next'
-            current_read.direction = PileupRead::REVERSE_DIRECTION
-            current_read.sequence = "#{current_read.sequence}#{matches[1]}"
-          end
-          if matches[2].length > 0
-            #log.debug "Ending this read, even though it started here too.. it happens.."
-            # end this read
-            reads_ending.push current_read_index
-          end
-
-          
-        elsif matches = bases.match(/^\*([\+\-])([0-9]+)([ACGTNacgtn=]+)(\${0,1})/)
-          #log.debug 'gap then insert/delete found'
-          # gap - should already be known from the last position
-          current_read.sequence = "#{current_read.sequence}*"
-          if matches[4].length > 0
-            #log.debug "Ending this read"
-            # end this read
-            reads_ending.push current_read_index
-          end
-                    
-          # record the insertion
-          if matches[1] == '+'
-            current_read.add_insertion pileup.pos, matches[2], matches[3]
-          end
-
-        elsif matches = bases.match(/(^[ACGTNacgtn\*])(\${0,1})/)
-          #log.debug 'mismatch found (or deletion)'
-          # simple mismatch
-          current_read.sequence = "#{current_read.sequence}#{matches[1]}"
-          if matches[2].length > 0
-            #log.debug "Ending this read"
-            reads_ending.push current_read_index
+            bases = bases[last_matched[1].length...bases.length]
+            if matches[1]=='+'
+              # record the insertion
+              current_read.add_insertion pileup.pos, matches[2], last_matched[1]
+            elsif matches[1]=='-'
+              #currently deletions are not recorded, slipped to future
+            end
           end
         end
-        #log.debug "current read's sequence: #{current_read.sequence}"
+        log.debug "after indel removal, pileup is now #{bases}" if log.debug?
         
-        #raise Exception, "implement mismatch parsing here!!!"
-        raise Exception, "Unexpected Pileup format bases, starting here: #{bases}, from #{pileup.inspect}" if matches.nil?
+        # Then read an ending read
+        if bases[0]=='$'
+          reads_ending.push current_read_index
+          matched_string += '$'
+          bases = bases[1...bases.length]
+        end
         
-        #remove the matched part from the base string for next time
-        bases = bases[matches.to_s.length..bases.length-1]
-
+        log.debug "Matched '#{matched_string}', now the bases are '#{bases}'" if log.debug?
+        
         current_read_index += 1
       end
 
