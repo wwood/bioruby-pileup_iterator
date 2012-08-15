@@ -83,7 +83,7 @@ class Bio::DB::PileupIterator
           matched_string += matches[1]+matches[2]
           log.debug "after removal of bases leading up to an insertion/deletion, pileup is #{bases}" if log.debug?
           
-          regex = /^([ACGTNacgtn]{#{matches[2].to_i}})/
+          regex = /^([ACGTNacgtn=]{#{matches[2].to_i}})/
           log.debug "insertion/deletion secondary regex: #{regex.inspect}" if log.debug?
           last_matched = bases.match(regex)
           

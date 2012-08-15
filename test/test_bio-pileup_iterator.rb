@@ -216,4 +216,11 @@ class TestBioPileupIterator < Test::Unit::TestCase
     piles = Bio::DB::PileupIterator.new(line).to_a #parse, it should fail otherwise
     assert_equal 14, piles[0].coverage
   end
+  
+  def test_unexpected_equals
+    line = "contig00032\t264\tg\t10\t*+1=$.*+1c,.*+1c...,\t~^~^^~^^^W\n"
+    piles = Bio::DB::PileupIterator.new(line).to_a #parse, it should fail otherwise
+    assert_equal 10, piles[0].coverage
+    assert_equal 10, piles[0].reads.length
+  end
 end
