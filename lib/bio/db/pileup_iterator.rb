@@ -35,6 +35,7 @@ class Bio::DB::PileupIterator
       log.debug "new column's read_bases: #{bases.inspect}" if log.debug?
       log.debug "pileup entry parsed: #{pileup.inspect}" if log.debug?
       while bases.length > 0
+        log.debug "==== new read within a single pileup being parsed. Starting with #{bases}" if log.debug?
         
         # Firstly, what is the current read we are working with
         current_read = current_ordered_reads[current_read_index]
@@ -47,15 +48,12 @@ class Bio::DB::PileupIterator
         matches = nil
         
         # if starting, remove it
+        log.debug "before read start removal, pileup is #{bases}, read is #{current_read}" if log.debug?
         matched_string = ''
         if bases[0]=='^'
-          matched_string += bases[0]
-          bases = bases[1...bases.length]
-          
-          # ignore optional mapping quality of the read
-          unless bases[0].match(/^([ACGTNacgtn\.\,\*])/)
-            bases = bases[1...bases.length]
-          end
+          # Match the ^ and the mapping quality
+          matched_string += bases[0..1]
+          bases = bases[2...bases.length]
         end
         log.debug "after read start removal, pileup is #{bases}" if log.debug?
         
