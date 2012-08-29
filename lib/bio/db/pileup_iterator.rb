@@ -3,10 +3,6 @@ require 'pp'
 class Bio::DB::Pileup
   # Bio::DB::PileupIterator::PileupRead objects that occur at this position
   attr_accessor :reads
-  
-  def num_deletions
-    return read_bases.gsub(/[^\*]/,'').length
-  end
 end
 
 class Bio::DB::PileupIterator
@@ -21,6 +17,7 @@ class Bio::DB::PileupIterator
   # Known problems:
   # * Doesn't record start or ends of each read
   # * Doesn't lookahead to determine the sequence of each read (though it does give the preceding bases)
+  # * Doesn't record the mapping quality of each read
   def each
     current_ordered_reads = []
     log = Bio::Log::LoggerPlus['bio-pileup_iterator']
