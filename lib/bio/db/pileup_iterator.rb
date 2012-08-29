@@ -67,7 +67,10 @@ class Bio::DB::PileupIterator
             current_read.direction = PileupRead::FORWARD_DIRECTION
             current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
           elsif matches[1] == ','
-            raise if !current_read.direction.nil? and current_read.direction != PileupRead::REVERSE_DIRECTION
+            if !current_read.direction.nil? and current_read.direction != PileupRead::REVERSE_DIRECTION
+              pp current_read
+              raise "Unexpectedly found direction #{current_read.direction}, expected #{PileupRead::REVERSE_DIRECTION}, in starting at '#{bases}'(EndOfLine) in '#{line}'"
+            end
             current_read.direction = PileupRead::REVERSE_DIRECTION
             current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
           else
