@@ -1,4 +1,4 @@
-
+require 'pp'
 
 class Bio::DB::Pileup
   # Bio::DB::PileupIterator::PileupRead objects that occur at this position
@@ -63,13 +63,16 @@ class Bio::DB::PileupIterator
         if matches = bases.match(/^([ACGTNacgtn\.\,\*])/)
           matched_string += bases[0]
           if matches[1] == '.'
-            raise if !current_read.direction.nil? and current_read.direction != PileupRead::FORWARD_DIRECTION
+            if !current_read.direction.nil? and current_read.direction != PileupRead::FORWARD_DIRECTION
+              pp current_read
+              raise "Unexpectedly found direction #{current_read.direction}, expected #{PileupRead::FORWARD_DIRECTION}, in starting at '#{bases}'(EndOfLine) in '#{line}', in the read above"
+            end
             current_read.direction = PileupRead::FORWARD_DIRECTION
             current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
           elsif matches[1] == ','
             if !current_read.direction.nil? and current_read.direction != PileupRead::REVERSE_DIRECTION
               pp current_read
-              raise "Unexpectedly found direction #{current_read.direction}, expected #{PileupRead::REVERSE_DIRECTION}, in starting at '#{bases}'(EndOfLine) in '#{line}'"
+              raise "Unexpectedly found direction #{current_read.direction}, expected #{PileupRead::REVERSE_DIRECTION}, in starting at '#{bases}'(EndOfLine) in '#{line}', in the read above"
             end
             current_read.direction = PileupRead::REVERSE_DIRECTION
             current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
