@@ -240,19 +240,15 @@ class TestBioPileupIterator < Test::Unit::TestCase
     assert_equal '-', piles[0].reads[0].direction
   end
   
-  def test_some_bug
+  def test_when_read_mapping_quality_is_dot
     lines = "gi|308171891|ref|NC_014551.1|\t2\tA\t2\t^:,^~,\t!!\n"+
-      "gi|308171891|ref|NC_014551.1|\t3\tT\t4\t,,^!.^.,\t!!!!\n"+
+      "gi|308171891|ref|NC_014551.1|\t3\tT\t4\t,,^!.^.,\t!!!!\n"+ # This is the line that is really being tested
       "gi|308171891|ref|NC_014551.1|\t4\tT\t4\t,,.,\t!!!!\n"
-    piles = Bio::DB::PileupIterator.new(lines).each do |pile|
-      puts
-      pp pile
-    end
     piles = Bio::DB::PileupIterator.new(lines).to_a #parse, it should fail otherwise
     assert_equal 2, piles[0].coverage
-    assert_equal 4, piles[3].coverage
+    assert_equal 4, piles[2].coverage
     assert_equal 2, piles[0].reads.length
-    assert_equal 'A', piles[0].reads[0].sequence
+    assert_equal 'ATT', piles[0].reads[0].sequence
     assert_equal '-', piles[0].reads[0].direction
   end
 end
