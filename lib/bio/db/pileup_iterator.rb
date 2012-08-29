@@ -48,9 +48,14 @@ class Bio::DB::PileupIterator
         
         # if starting, remove it
         matched_string = ''
-        if bases[0..1]=='^]'
+        if bases[0]=='^'
           matched_string += bases[0]
-          bases = bases[2...bases.length]
+          bases = bases[1...bases.length]
+          
+          # ignore optional mapping quality of the read
+          unless bases[0].match(/^([ACGTNacgtn\.\,\*])/)
+            bases = bases[1...bases.length]
+          end
         end
         log.debug "after read start removal, pileup is #{bases}" if log.debug?
         

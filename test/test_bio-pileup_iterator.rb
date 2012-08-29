@@ -223,4 +223,20 @@ class TestBioPileupIterator < Test::Unit::TestCase
     assert_equal 10, piles[0].coverage
     assert_equal 10, piles[0].reads.length
   end
+  
+  def test_optional_mapping_quality
+    line = "gi|308171891|ref|NC_014551.1|\t2\tA\t2\t^:,^~,\t!!\n"
+    piles = Bio::DB::PileupIterator.new(line).to_a #parse, it should fail otherwise
+    assert_equal 2, piles[0].coverage
+    assert_equal 2, piles[0].reads.length
+    assert_equal 'A', piles[0].reads[0].sequence
+    assert_equal '-', piles[0].reads[0].direction
+    
+    line_without_mapping_quality = "gi|308171891|ref|NC_014551.1|\t2\tA\t2\t^,^,\t!!\n"
+    piles = Bio::DB::PileupIterator.new(line).to_a #parse, it should fail otherwise
+    assert_equal 2, piles[0].coverage
+    assert_equal 2, piles[0].reads.length
+    assert_equal 'A', piles[0].reads[0].sequence
+    assert_equal '-', piles[0].reads[0].direction
+  end
 end
