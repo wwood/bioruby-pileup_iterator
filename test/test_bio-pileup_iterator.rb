@@ -251,4 +251,12 @@ class TestBioPileupIterator < Test::Unit::TestCase
     assert_equal 'ATT', piles[0].reads[0].sequence
     assert_equal '-', piles[0].reads[0].direction
   end
+  
+  def test_direction_without_starting_a_read
+    lines = "contig00074\t4243\tN\t8\tg$GGGgGgg\t~~~~~~~~\n"
+    
+    piles = Bio::DB::PileupIterator.new(lines).to_a
+    assert_equal '-', piles[0].reads[0].direction
+    assert_equal '+', piles[0].reads[1].direction
+  end
 end
