@@ -251,4 +251,13 @@ class TestBioPileupIterator < Test::Unit::TestCase
     assert_equal 'ATT', piles[0].reads[0].sequence
     assert_equal '-', piles[0].reads[0].direction
   end
+  
+  def test_n
+    lines = "gi|308171891|ref|NC_014551.1|\t111565\tN\t7\taaAaAAA\t~~~~~~~\n"
+    piles = Bio::DB::PileupIterator.new(lines).to_a #parse, it should fail otherwise
+    assert_equal 1, piles.length
+    assert_equal 7, piles[0].coverage
+    assert_equal 'a', piles[0].reads[1].sequence
+    assert_equal 'N', piles[0].ref_base
+  end
 end
