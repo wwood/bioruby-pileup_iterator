@@ -72,7 +72,14 @@ class Bio::DB::PileupIterator
             current_read.direction = PileupRead::REVERSE_DIRECTION
             current_read.sequence = "#{current_read.sequence}#{pileup.ref_base}"
           else
-            # Could sanity check the direction here by detecting case, but eh
+            if current_read.direction.nil? and matches[1] != '*'
+              # Could sanity check the direction here by detecting case, but eh
+              if matches[1].upcase == matches[1] or matches[1]== '.'
+                current_read.direction = PileupRead::FORWARD_DIRECTION
+              else
+                current_read.direction = PileupRead::REVERSE_DIRECTION
+              end
+            end
             current_read.sequence = "#{current_read.sequence}#{matches[1]}"
           end
           # remove the matched base
